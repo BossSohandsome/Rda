@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎄 Merry Christmas Stephanie</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  height:100vh;overflow:hidden;
+  background:linear-gradient(to bottom,#050d1a,#0a2540,#123a5f);
+  font-family:Arial,sans-serif;
+}
+canvas{position:absolute;inset:0;pointer-events:none}
+
+/* Moon */
+.moon{
+  position:absolute;top:8%;right:10%;
+  width:120px;height:120px;border-radius:50%;
+  background:radial-gradient(circle,#fff,#ddd);
+  box-shadow:0 0 60px rgba(255,255,255,.8);
+  display:none;z-index:2;
+}
+
+/* Gift Area */
+.gift-container{
+  position:absolute;inset:0;
+  display:flex;justify-content:center;align-items:center;
+  z-index:10;
+  transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* เมื่อเปิดกล่อง ให้เลื่อนลงและเล็กลง */
+.gift-container.opened-pos {
+  transform: translateY(180px) scale(0.6);
+}
+
+.gift-box{width:260px;height:260px;position:relative;cursor:pointer;perspective:1000px}
+.box-bottom,.box-top{position:absolute;inset:0;border-radius:20px;background:linear-gradient(135deg,#c41e3a,#7a0000);box-shadow: 0 10px 20px rgba(0,0,0,0.3);}
+.box-top{transform-origin:top;transition:1.2s cubic-bezier(0.68, -0.55, 0.27, 1.55);z-index: 11;}
+.box-top.open{transform:rotateX(-110deg) translateY(-20px);} /* ปรับองศาการเปิดไม่ให้บังชื่อมากเกินไป */
+
+.ribbon-v,.ribbon-h{position:absolute;background:linear-gradient(135deg,#FFD700,#FFA500)}
+.ribbon-v{width:20%;height:100%;left:40%}
+.ribbon-h{height:20%;width:100%;top:40%}
+
+/* Text Appearance */
+.instructions{
+  position:fixed;top:40px;left:50%;transform:translateX(-50%);
+  color:#fff;background:rgba(0,0,0,.4);padding:10px 20px;border-radius:20px;z-index:20;
+  animation: bounce 2s infinite;
+}
+@keyframes bounce { 0%,100%{top:40px} 50%{top:50px} }
+
+.name-container{
+  position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;
+  opacity:0;transform:scale(0) translateY(50px);
+  transition:1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index:100; pointer-events: none;
+}
+.name-container.show{opacity:1;transform:scale(1) translateY(-50px)}
+
+.name-text{
+  font-size:70px;font-family: 'Dancing Script', cursive, serif;
+  background: linear-gradient(to right, #FFD700, #fff, #FFD700);
+  background-size: 200% auto;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  animation: shine 3s linear infinite;
+  text-shadow: 0 0 20px rgba(255,215,0,0.5);
+}
+@keyframes shine { to { background-position: 200% center; } }
+.subtitle{font-size:28px;color:#FFD700;margin-top:10px;letter-spacing: 2px;}
+
+/* Controls */
+.control-panel{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  display:flex;gap:10px;flex-wrap:wrap;justify-content:center;z-index:150;
+  background: rgba(0,0,0,0.3); padding: 10px; border-radius: 30px; backdrop-filter: blur(5px);
+}
+.ctrl-btn{
+  width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background:rgba(255,255,255,.15);
+  color:#fff;cursor:pointer;transition:.3s; font-size: 20px;
+}
+.ctrl-btn.active{background:linear-gradient(135deg,#FFD700,#FF8C00);box-shadow: 0 0 15px #FFD700;}
+
+.particle{position:absolute;border-radius:50%;z-index: 100;}
+</style>
+</head>
+<body>
+
+<div class="moon" id="moon"></div>
+
+<canvas id="snow"></canvas>
+<canvas id="stars"></canvas>
+<canvas id="heart"></canvas>
+<canvas id="sheep"></canvas>
+<canvas id="santa"></canvas>
+
+<div class="instructions">🎁 แตะที่กล่องเพื่อเปิด 🎁</div>
+
+<div class="gift-container" id="giftWrapper">
+  <div class="gift-box" id="gift">
+    <div class="box-bottom"></div>
+    <div class="box-top" id="lid">
+      <div class="ribbon-v"></div><div class="ribbon-h"></div>
+    </div>
+  </div>
+</div>
+
+<div class="name-container" id="name">
+  <div class="name-text">Stephanie</div>
+  <div class="subtitle">✨ Merry Christmas ✨</div>
+</div>
+
+<div class="control-panel">
+  <div class="ctrl-btn active" id="snowBtn">❄️</div>
+  <div class="ctrl-btn active" id="fireBtn">🎆</div>
+  <div class="ctrl-btn active" id="starBtn">⭐</div>
+  <div class="ctrl-btn" id="moonBtn">🌙</div>
+  <div class="ctrl-btn" id="heartBtn">💖</div>
+  <div class="ctrl-btn" id="sheepBtn">🐑</div>
+  <div class="ctrl-btn" id="santaBtn">🎅</div>
+  <div class="ctrl-btn active" id="musicBtn">🔊</div>
+</div>
+
+<div id="player" style="display:none"></div>
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
+let player;
+function onYouTubeIframeAPIReady(){
+  player=new YT.Player('player',{videoId:'aAkMkVFwAoo',playerVars:{loop:1,playlist:'aAkMkVFwAoo'}});
+}
+
+const cvs=[snow,stars,heart,sheep,santa];
+const ctx={
+  snow:snow.getContext('2d'),
+  stars:stars.getContext('2d'),
+  heart:heart.getContext('2d'),
+  sheep:sheep.getContext('2d'),
+  santa:santa.getContext('2d')
+};
+function resize(){cvs.forEach(c=>{c.width=innerWidth;c.height=innerHeight})}
+resize();addEventListener('resize',resize);
+
+let snowOn=true, starOn=true, heartOn=false, sheepOn=false, santaOn=false, fireOn=true;
+
+const flakes=Array.from({length:60},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,s:Math.random()*18+10,v:Math.random()*1.5+.5}));
+function animSnow(){
+  if(!snowOn) return;
+  ctx.snow.clearRect(0,0,innerWidth,innerHeight);
+  flakes.forEach(f=>{
+    ctx.snow.font=f.s+'px Arial'; ctx.snow.fillText('❄️',f.x,f.y);
+    f.y+=f.v; if(f.y>innerHeight){f.y=-20;f.x=Math.random()*innerWidth}
+  });
+  requestAnimationFrame(animSnow);
+} animSnow();
+
+const starArr=Array.from({length:80},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,o:Math.random(),d:(Math.random()-.5)*.02}));
+function animStars(){
+  if(!starOn) return;
+  ctx.stars.clearRect(0,0,innerWidth,innerHeight);
+  starArr.forEach(s=>{
+    s.o+=s.d; if(s.o<0||s.o>1)s.d*=-1;
+    ctx.stars.globalAlpha=s.o; ctx.stars.fillStyle='#FFD700';
+    ctx.stars.fillRect(s.x,s.y,2,2);
+  });
+  requestAnimationFrame(animStars);
+} animStars();
+
+const hearts=Array.from({length:30},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,s:Math.random()*18+12,v:Math.random()+.5}));
+function animHeart(){
+  if(!heartOn) return;
+  ctx.heart.clearRect(0,0,innerWidth,innerHeight);
+  hearts.forEach(h=>{
+    ctx.heart.font=h.s+'px Arial'; ctx.heart.fillText('💖',h.x,h.y);
+    h.y+=h.v; if(h.y>innerHeight){h.y=-20;h.x=Math.random()*innerWidth}
+  });
+  requestAnimationFrame(animHeart);
+}
+
+const sheeps=Array.from({length:15},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,s:Math.random()*22+18,v:Math.random()+.3}));
+function animSheep(){
+  if(!sheepOn) return;
+  ctx.sheep.clearRect(0,0,innerWidth,innerHeight);
+  sheeps.forEach(h=>{
+    ctx.sheep.font=h.s+'px Arial'; ctx.sheep.fillText('🐑',h.x,h.y);
+    h.y+=h.v; if(h.y>innerHeight){h.y=-30;h.x=Math.random()*innerWidth}
+  });
+  requestAnimationFrame(animSheep);
+}
+
+const santas=Array.from({length:10},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,s:Math.random()*26+22,v:Math.random()+.4}));
+function animSanta(){
+  if(!santaOn) return;
+  ctx.santa.clearRect(0,0,innerWidth,innerHeight);
+  santas.forEach(h=>{
+    ctx.santa.font=h.s+'px Arial'; ctx.santa.fillText('🎅',h.x,h.y);
+    h.y+=h.v; if(h.y>innerHeight){h.y=-40;h.x=Math.random()*innerWidth}
+  });
+  requestAnimationFrame(animSanta);
+}
+
+let fireLoop=null;
+function fireworks(){
+  for(let i=0;i<60;i++){
+    const p=document.createElement('div');
+    p.className='particle';
+    p.style.background=`hsl(${Math.random()*360},100%,60%)`;
+    p.style.width=p.style.height=Math.random()*6+4+'px';
+    p.style.left='50%';p.style.top='50%';
+    document.body.appendChild(p);
+    const a=Math.random()*Math.PI*2,d=Math.random()*400+100;
+    p.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${Math.cos(a)*d}px,${Math.sin(a)*d}px)`,opacity:0}],{duration:2000, easing:'ease-out'});
+    setTimeout(()=>p.remove(),2000);
+  }
+}
+function startFire(){ if(!fireLoop) fireLoop=setInterval(fireworks,2500) }
+function stopFire(){ clearInterval(fireLoop); fireLoop=null }
+startFire();
+
+/* ===== ACTION ===== */
+let opened=false;
+gift.onclick=()=>{
+  if(opened) return;
+  opened=true;
+  lid.classList.add('open');
+  giftWrapper.classList.add('opened-pos'); // เลื่อนกล่องลง
+  document.querySelector('.instructions').style.opacity='0';
+  fireworks();
+  if(player && player.playVideo) player.playVideo();
+  setTimeout(()=>name.classList.add('show'), 800);
+};
+
+/* ===== BUTTONS ===== */
+snowBtn.onclick=()=>{snowOn=!snowOn; snowBtn.classList.toggle('active',snowOn); if(snowOn) animSnow(); else ctx.snow.clearRect(0,0,innerWidth,innerHeight)}
+starBtn.onclick=()=>{starOn=!starOn; starBtn.classList.toggle('active',starOn); if(starOn) animStars(); else ctx.stars.clearRect(0,0,innerWidth,innerHeight)}
+heartBtn.onclick=()=>{heartOn=!heartOn; heartBtn.classList.toggle('active',heartOn); if(heartOn) animHeart(); else ctx.heart.clearRect(0,0,innerWidth,innerHeight)}
+sheepBtn.onclick=()=>{sheepOn=!sheepOn; sheepBtn.classList.toggle('active',sheepOn); if(sheepOn) animSheep(); else ctx.sheep.clearRect(0,0,innerWidth,innerHeight)}
+santaBtn.onclick=()=>{santaOn=!santaOn; santaBtn.classList.toggle('active',santaOn); if(santaOn) animSanta(); else ctx.santa.clearRect(0,0,innerWidth,innerHeight)}
+moonBtn.onclick=()=>{moon.style.display = moon.style.display==='block'?'none':'block'; moonBtn.classList.toggle('active')}
+fireBtn.onclick=()=>{fireOn=!fireOn; fireBtn.classList.toggle('active',fireOn); fireOn?startFire():stopFire()}
+musicBtn.onclick=()=>{
+  if(!player || !player.getPlayerState) return;
+  if(player.getPlayerState()===1){player.pauseVideo();musicBtn.classList.remove('active')}
+  else{player.playVideo();musicBtn.classList.add('active')}
+};
+</script>
+</body>
+</html>
